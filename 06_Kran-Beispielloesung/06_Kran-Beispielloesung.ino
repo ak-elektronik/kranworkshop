@@ -51,17 +51,13 @@ void loop()
 
     // wenn Mindestwert erreicht, addiere das Ergebnis zur aktuellen Position
     // verhindert, dass sich der Kran bewegt, ohne dass der Joystick verwendet wird
-
-    pitchPos += pitchInput;
-    yawPos += yawInput;
-    pitchPos = constrain(pitchPos, 0.0f, 180.0f);
-    yawPos = constrain(yawPos, 0.0f, 180.0f);
     
     if(abs(pitchInput) > sensitivity * 100.0f) pitchPos += pitchInput;
     if(abs(yawInput) > sensitivity * 100.0f) yawPos += yawInput;
 
     // verhindere, dass wir aus dem ansteuerbaren Bereich herauskommen
-    
+    pitchPos = constrain(pitchPos, 0.0f, 180.0f);
+    yawPos = constrain(yawPos, 0.0f, 180.0f);
   }
 
   // setze die Servos auf die neue Stellung
