@@ -19,7 +19,7 @@ void setup()
   Serial.begin(115200);
   servoPitch.attach(8);
   servoYaw.attach(7);
-  pinMode(12, INPUT);
+  pinMode(12, INPUT_PULLUP);
   pinMode(A0, INPUT);
   pinMode(A1, INPUT);
   pitchReadOffset = analogRead(A0);
