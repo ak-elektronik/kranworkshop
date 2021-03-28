@@ -10,7 +10,8 @@ float yawPos = 90;
 
 // Konstante für die Sensitivität
 const float sensitivity = 0.005f;
-
+int pitchInputOffset;
+int yawInputOffset;
 
 void setup()
 {
@@ -21,6 +22,8 @@ void setup()
   pinMode(12, INPUT);
   pinMode(A0, INPUT);
   pinMode(A1, INPUT);
+  pitchInputOffset = analogRead(A0);
+  yawInputOffset = analogRead(A1);
 }
 
 void loop()
@@ -41,8 +44,8 @@ void loop()
 
     // subtrahiere X, um den den Wertebereich anzupassen, sodass sich 0 bei der Mittelstellung ergibt (alternativ: map())
     // multipliziere mit der Sensitivität, da sonst selbst kleinste Bewegungen zum Vollausschlag führen
-    float pitchInput = (pitchRead - 517) * sensitivity;
-    float yawInput = (yawRead - 497) * sensitivity;
+    float pitchInput = (pitchRead - pitchInputOffset) * sensitivity;
+    float yawInput = (yawRead - yawInputOffset) * sensitivity;
 
     Serial.print(String(pitchInput) + ", " + String(yawInput) + "; ");
 
