@@ -9,9 +9,9 @@ float pitchPos = 90;
 float yawPos = 90;
 
 // Konstante für die Sensitivität
-const float sensitivity = 0.005f;
-int pitchInputOffset;
-int yawInputOffset;
+const float sensitivity = 0.001f;
+int pitchReadOffset;
+int yawReadOffset;
 
 void setup()
 {
@@ -22,8 +22,8 @@ void setup()
   pinMode(12, INPUT);
   pinMode(A0, INPUT);
   pinMode(A1, INPUT);
-  pitchInputOffset = analogRead(A0);
-  yawInputOffset = analogRead(A1);
+  pitchReadOffset = analogRead(A0);
+  yawReadOffset = analogRead(A1);
 }
 
 void loop()
@@ -40,23 +40,28 @@ void loop()
     int pitchRead = analogRead(A0);
     int yawRead = analogRead(A1);
 
-   Serial.print(String(pitchRead) + ", " + String(yawRead) + "; ");
+   Serial.print("pitch Read:" + String(pitchRead) + ", "+ "yaw Read:" + String(yawRead) + "; ");
 
     // subtrahiere X, um den den Wertebereich anzupassen, sodass sich 0 bei der Mittelstellung ergibt (alternativ: map())
     // multipliziere mit der Sensitivität, da sonst selbst kleinste Bewegungen zum Vollausschlag führen
-    float pitchInput = (pitchRead - pitchInputOffset) * sensitivity;
-    float yawInput = (yawRead - yawInputOffset) * sensitivity;
+    float pitchInput = (pitchRead - pitchReadOffset) * sensitivity;
+    float yawInput = (yawRead - yawReadOffset) * sensitivity;
 
-    Serial.print(String(pitchInput) + ", " + String(yawInput) + "; ");
+    Serial.print("pitchInput:" + String(pitchInput) + ", " + "yawInput:" + String(yawInput) + "; ");
 
     // wenn Mindestwert erreicht, addiere das Ergebnis zur aktuellen Position
     // verhindert, dass sich der Kran bewegt, ohne dass der Joystick verwendet wird
-    if(abs(pitchInput) > sensitivity * 4.0f) pitchPos += pitchInput;
-    if(abs(yawInput) > sensitivity * 4.0f) yawPos += yawInput;
 
-    // verhindere, dass wir aus dem ansteuerbaren Bereich herauskommen
+    pitchPos += pitchInput;
+    yawPos += yawInput;
     pitchPos = constrain(pitchPos, 0.0f, 180.0f);
     yawPos = constrain(yawPos, 0.0f, 180.0f);
+    
+    if(abs(pitchInput) > sensitivity * 100.0f) pitchPos += pitchInput;
+    if(abs(yawInput) > sensitivity * 100.0f) yawPos += yawInput;
+
+    // verhindere, dass wir aus dem ansteuerbaren Bereich herauskommen
+    
   }
 
   // setze die Servos auf die neue Stellung
@@ -64,5 +69,5 @@ void loop()
   servoYaw.write(yawPos);
   delay(5);   // kurz warten, um Störungen zwischen Servo und Joystick zu vermeiden
 
-  Serial.println(String(pitchPos) + ", " + String(yawPos));
+  Serial.println("pitchPos:" + String(pitchPos) + ", " + "yawPos:" + String(yawPos));
 }
