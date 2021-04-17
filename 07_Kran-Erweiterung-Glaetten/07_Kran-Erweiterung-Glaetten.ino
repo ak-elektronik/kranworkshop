@@ -8,6 +8,10 @@ Servo servoYaw;
 float pitchPos = 90;
 float yawPos = 90;
 
+//Offset Variablen zum Glätten des Inputs
+float pitchOffset = 512.0f;
+float yawOffset = 512.0f;
+
 // Konstante für die Sensitivität
 const float sensitivity = 1.0f;
 const float threshold = 0.01f;
@@ -15,7 +19,7 @@ const float threshold = 0.01f;
 // Array zum Glätten der Analog-Inputs
 #define HISTORY_DEPTH 20
 int pitchHistory[HISTORY_DEPTH];
-int yawHistory[20];
+int yawHistory[HISTORY_DEPTH];
 int historyIndex = 0;
 
 
@@ -25,7 +29,7 @@ void setup()
   Serial.begin(115200);
   servoPitch.attach(8);
   servoYaw.attach(7);
-  pinMode(12, INPUT);
+  pinMode(12, INPUT_PULLUP);
   pinMode(A0, INPUT);
   pinMode(A1, INPUT);
 
@@ -34,10 +38,14 @@ void setup()
     pitchHistory[i] = 0;
     yawHistory[i] = 0;
   }
+
+  pitchOffset = analogRead(A0);
+  yawOffset = analogRead(A1);
 }
 
 void loop()
 {
+  
   if(!digitalRead(12))
   {
     // wenn der Joystick gedrückt wird, sezte den Kran auf die Ausgangsstellung zurück
@@ -47,8 +55,8 @@ void loop()
   else
   {
     // neuen Wert zur Historie hinzufügen, Index erhöhen und ggf. zurücksetzen
-    pitchHistory[historyIndex] = analogRead(A0) - 517;
-    yawHistory[historyIndex] = analogRead(A1) - 497;
+    pitchHistory[historyIndex] = analogRead(A0) - pitchOffset;
+    yawHistory[historyIndex] = analogRead(A1) - yawOffset;
     historyIndex = (historyIndex + 1) % 20;
 
     // Mittelwert aus Historie berechnen (dabei ggf. maximalen Wertebereich von int berücksichtigen!)
