@@ -1,6 +1,6 @@
 void setup()
 {
-  // Pin 13 als Ausgang konfigurieren
+  // Pin 13 als Ausgang konfigurieren, an Pin 13 ist die Onboard LED angeschlossen
   pinMode(13, OUTPUT);
 }
 
