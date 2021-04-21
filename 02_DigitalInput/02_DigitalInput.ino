@@ -1,7 +1,7 @@
 void setup()
 {
   // konfiguriere IO Pins
-  pinMode(12,INPUT);
+  pinMode(12, INPUT);
   pinMode(13, OUTPUT);
 }
 

@@ -1,5 +1,12 @@
 #include <Servo.h>
 
+// Pinbelegung
+constexpr int joystickButtonPin = 12;
+constexpr int joystickXPin = A0;
+constexpr int joystickYPin = A1;
+constexpr int servoPitchPin = 7;
+constexpr int servoYawPin = 8;
+
 // lege ein neues Objekt vom Typ "Servo" an
 Servo servoPitch;
 Servo servoYaw;
@@ -8,18 +15,18 @@ Servo servoYaw;
 float pitchPos = 90;
 float yawPos = 90;
 
-//Offset Variablen zum Glätten des Inputs
-float pitchOffset = 512.0f;
-float yawOffset = 512.0f;
-
 // Konstante für die Sensitivität
-const float sensitivity = 1.0f;
-const float threshold = 0.01f;
+constexpr float sensitivity = 0.001f;
+constexpr float deadzone = sensitivity * 5.0f;
+
+// Nullposition des Joysticks
+int pitchReadOffset;
+int yawReadOffset;
 
 // Array zum Glätten der Analog-Inputs
-#define HISTORY_DEPTH 20
-int pitchHistory[HISTORY_DEPTH];
-int yawHistory[HISTORY_DEPTH];
+constexpr int filterDepth = 20;
+int pitchHistory[filterDepth];
+int yawHistory[filterDepth];
 int historyIndex = 0;
 
 
@@ -27,20 +34,22 @@ void setup()
 {
   // konfiguriere Servos, Pins und Serial
   Serial.begin(115200);
-  servoPitch.attach(8);
-  servoYaw.attach(7);
-  pinMode(12, INPUT_PULLUP);
-  pinMode(A0, INPUT);
-  pinMode(A1, INPUT);
+  servoPitch.attach(servoPitchPin);
+  servoYaw.attach(servoYawPin);
+  pinMode(joystickButtonPin, INPUT_PULLUP);
+  pinMode(joystickXPin, INPUT);
+  pinMode(joystickYPin, INPUT);
 
-  for(int i = 0; i < HISTORY_DEPTH; i++)
+  // initialisiere Arrays auf 0
+  for(int i = 0; i < filterDepth; i++)
   {
     pitchHistory[i] = 0;
     yawHistory[i] = 0;
   }
 
-  pitchOffset = analogRead(A0);
-  yawOffset = analogRead(A1);
+  // lese Joystick Offset, während dieser noch in Ruhelage ist
+  pitchReadOffset = analogRead(joystickYPin);
+  yawReadOffset = analogRead(joystickXPin);
 }
 
 void loop()
@@ -54,38 +63,30 @@ void loop()
   }
   else
   {
-    // neuen Wert zur Historie hinzufügen, Index erhöhen und ggf. zurücksetzen
-    pitchHistory[historyIndex] = analogRead(A0) - pitchOffset;
-    yawHistory[historyIndex] = analogRead(A1) - yawOffset;
+    // neuen Wert zur Historie hinzufügen
+    pitchHistory[historyIndex] = analogRead(joystickYPin) - pitchReadOffset;
+    yawHistory[historyIndex] = analogRead(joystickXPin) - yawReadOffset;
+    
+    //Index erhöhen und ggf. zurücksetzen
     historyIndex = (historyIndex + 1) % 20;
 
     // Mittelwert aus Historie berechnen (dabei ggf. maximalen Wertebereich von int berücksichtigen!)
     int pitchTotal = 0;
     int yawTotal = 0;
-    for(int i = 0; i < HISTORY_DEPTH; i++)
+    for(int i = 0; i < filterDepth; i++)
     {
       pitchTotal += pitchHistory[i];
       yawTotal += yawHistory[i];
     }
-    float pitchAvg = pitchTotal / HISTORY_DEPTH;
-    float yawAvg = yawTotal / HISTORY_DEPTH;
+    float pitchAvg = pitchTotal / filterDepth;
+    float yawAvg = yawTotal / filterDepth;
     // auch möglich: gewichteter Mittelwert, neuere Werte stärker gewichten => ergibt "echtes" Tiefpassverhalten
     
     Serial.print(String(pitchAvg) + ", " + String(yawAvg) + "; ");
     
-    // Wertebereich auf -pi bis +pi anpassen
-    float pitchInput = pitchAvg / 1023.0f * PI;
-    float yawInput = yawAvg / 1023.0f * PI;
-
-    // nicht-Linearität des Joysticks ausgleichen, ergibt Werte zwischen -1 und 1
-    pitchInput = sin(pitchInput);
-    yawInput = sin(yawInput);
-
-    Serial.print(String(pitchInput) + ", " + String(yawInput) + "; ");
-    
-    // auf die Prüfung mit Mindeständerung kann nun sogar verzichtet werden!
-    /*if(abs(pitchInput) > threshold)*/ pitchPos += pitchInput * sensitivity;
-    /*if(abs(yawInput) > threshold)*/ yawPos += yawInput * sensitivity;
+    // auf die Prüfung mit Mindeständerung sollte immer noch nicht verzichtet werden
+    if(abs(pitchAvg) > deadzone) pitchPos += pitchAvg * sensitivity;
+    if(abs(yawAvg) > deadzone) yawPos += yawAvg * sensitivity;
 
     // verhindert, dass wir aus dem ansteuerbaren Bereich herauskommen
     pitchPos = constrain(pitchPos, 0, 180);
@@ -93,8 +94,8 @@ void loop()
   }
 
   // setze die Servos auf die neue Stellung
-  servoPitch.write(pitchPos);
-  servoYaw.write(yawPos);
+  servoPitch.write(round(pitchPos));
+  servoYaw.write(round(yawPos));
 
   Serial.println(String(pitchPos) + ", " + String(yawPos));
 }

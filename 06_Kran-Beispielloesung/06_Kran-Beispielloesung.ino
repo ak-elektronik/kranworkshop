@@ -1,5 +1,12 @@
 #include <Servo.h>
 
+// Pinbelegung
+constexpr int joystickButtonPin = 12;
+constexpr int joystickXPin = A0;
+constexpr int joystickYPin = A1;
+constexpr int servoPitchPin = 7;
+constexpr int servoYawPin = 8;
+
 // lege ein neues Objekt vom Typ "Servo" an
 Servo servoPitch;
 Servo servoYaw;
@@ -9,7 +16,10 @@ float pitchPos = 90;
 float yawPos = 90;
 
 // Konstante für die Sensitivität
-const float sensitivity = 0.001f;
+constexpr float sensitivity = 0.001f;
+constexpr float deadzone = sensitivity * 5.0f;
+
+// Nullposition des Joysticks
 int pitchReadOffset;
 int yawReadOffset;
 
@@ -17,18 +27,20 @@ void setup()
 {
   // konfiguriere Servos, Pins und Serial
   Serial.begin(115200);
-  servoPitch.attach(8);
-  servoYaw.attach(7);
-  pinMode(12, INPUT_PULLUP);
-  pinMode(A0, INPUT);
-  pinMode(A1, INPUT);
-  pitchReadOffset = analogRead(A0);
-  yawReadOffset = analogRead(A1);
+  servoPitch.attach(servoPitchPin);
+  servoYaw.attach(servoYawPin);
+  pinMode(joystickButtonPin, INPUT_PULLUP);
+  pinMode(joystickXPin, INPUT);
+  pinMode(joystickYPin, INPUT);
+
+  // lese Joystick Offset, während dieser noch in Ruhelage ist
+  pitchReadOffset = analogRead(joystickYPin);
+  yawReadOffset = analogRead(joystickXPin);
 }
 
 void loop()
 {
-  if(!digitalRead(12))
+  if(!digitalRead(joystickButtonPin))
   {
     // wenn der Joystick gedrückt wird, sezte den Kran auf die Ausgangsstellung zurück
     pitchPos = 90;
@@ -37,10 +49,10 @@ void loop()
   else
   {
     // lese die Stellung des Joysticks ein
-    int pitchRead = analogRead(A0);
-    int yawRead = analogRead(A1);
+    int pitchRead = analogRead(joystickYPin);
+    int yawRead = analogRead(joystickXPin);
 
-   Serial.print("pitch Read:" + String(pitchRead) + ", "+ "yaw Read:" + String(yawRead) + "; ");
+    Serial.print("pitchRead:" + String(pitchRead) + ", "+ "yawRead:" + String(yawRead) + "; ");
 
     // subtrahiere X, um den den Wertebereich anzupassen, sodass sich 0 bei der Mittelstellung ergibt (alternativ: map())
     // multipliziere mit der Sensitivität, da sonst selbst kleinste Bewegungen zum Vollausschlag führen
@@ -51,9 +63,8 @@ void loop()
 
     // wenn Mindestwert erreicht, addiere das Ergebnis zur aktuellen Position
     // verhindert, dass sich der Kran bewegt, ohne dass der Joystick verwendet wird
-    
-    if(abs(pitchInput) > sensitivity * 100.0f) pitchPos += pitchInput;
-    if(abs(yawInput) > sensitivity * 100.0f) yawPos += yawInput;
+    if(abs(pitchInput) > deadzone) pitchPos += pitchInput;
+    if(abs(yawInput) > deadzone) yawPos += yawInput;
 
     // verhindere, dass wir aus dem ansteuerbaren Bereich herauskommen
     pitchPos = constrain(pitchPos, 0.0f, 180.0f);
@@ -61,9 +72,8 @@ void loop()
   }
 
   // setze die Servos auf die neue Stellung
-  servoPitch.write(pitchPos);
-  servoYaw.write(yawPos);
-  delay(5);   // kurz warten, um Störungen zwischen Servo und Joystick zu vermeiden
+  servoPitch.write(round(pitchPos));
+  servoYaw.write(round(yawPos));
 
   Serial.println("pitchPos:" + String(pitchPos) + ", " + "yawPos:" + String(yawPos));
 }
